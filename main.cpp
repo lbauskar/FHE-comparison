@@ -1,10 +1,9 @@
-#include "HEAAN.h"
 #include "ckks_example.h"
+#include "fhe_libs.h"
 #include "seal/seal.h"
 
-using std::complex, std::cout, std::endl;
-
 void heaanMult(long logq, long logp, long logn) {
+  using std::complex, std::cout, std::endl;
   cout << "!!! START TEST MULT !!!" << endl;
 
   srand(time(NULL));
@@ -37,8 +36,47 @@ void heaanMult(long logq, long logp, long logn) {
   cout << "!!! END TEST MULT !!!" << endl;
 }
 
+void helibMult() {
+  puts("Begin HElib mult test");
+  using namespace helib;
+  using namespace std;
+
+  // make secret key
+  Context context =
+      ContextBuilder<CKKS>().m(16 * 1024).bits(119).precision(30).c(2).build();
+  long n = context.getNSlots();
+  SecKey secretKey(context);
+  secretKey.GenSecKey();
+
+  // make public key
+  addSome1DMatrices(secretKey);
+  const PubKey &publicKey = secretKey;
+
+  // encrypt array
+  vector<double> v(n);
+  for (int i = 0; i < n; ++i) {
+    v[i] = sin(2 * PI * i / n);
+  }
+  PtxtArray p(context, v);
+  Ctxt c(publicKey);
+  p.encrypt(c);
+  printf("c.capacity = %f\nc.errorBound = %f\n", c.capacity(), c.errorBound());
+
+  // make nxn plaintext matrix
+  MatMul_CKKS mat(context,
+                  [n](long i, long j) { return ((i + j) % n) / double(n); });
+  c *= mat;
+  printf("c.capacity = %f\nc.errorBound = %f\n", c.capacity(), c.errorBound());
+
+  p *= mat;
+  PtxtArray pp(context);
+  pp.decrypt(c, secretKey);
+  printf("distance=%f\n", Distance(p, pp));
+}
+
 int main() {
   example_ckks_basics();
   heaanMult(800, 30, 4);
+  helibMult();
   return 0;
 }

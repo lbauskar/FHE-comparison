@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include "seal/seal.h"
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
@@ -15,6 +14,7 @@
 #include <mutex>
 #include <numeric>
 #include <random>
+#include <seal/seal.h>
 #include <sstream>
 #include <string>
 #include <thread>

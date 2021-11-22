@@ -1,0 +1,9 @@
+[submodule "HElib"]
+	path = HElib
+	url = https://github.com/homenc/HElib.git
+[submodule "HEAAN"]
+	path = HEAAN
+	url = https://github.com/snucrypto/HEAAN.git
+[submodule "SEAL"]
+	path = SEAL
+	url = https://github.com/microsoft/SEAL.git
