@@ -9,7 +9,7 @@ include(CTest)
 include(CMakePrintHelpers)
 enable_testing()
 
-add_executable(fhe_test main.cpp ckks_example.cpp)
+add_executable(fhe_test main.cpp ckks_example.cpp calculators/seal_calc.cpp)
 
 # Get FHE libs
 find_package(SEAL PATHS "SEAL/build" NO_DEFAULT_PATH REQUIRED)

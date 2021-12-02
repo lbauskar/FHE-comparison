@@ -1,3 +1,13 @@
 {
-    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
+    "files.associations": {
+        "*.tcc": "cpp",
+        "chrono": "cpp",
+        "compare": "cpp",
+        "limits": "cpp",
+        "memory": "cpp",
+        "mutex": "cpp",
+        "sstream": "cpp",
+        "type_traits": "cpp",
+        "random": "cpp"
+    }
 }

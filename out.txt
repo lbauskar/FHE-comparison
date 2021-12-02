@@ -1,0 +1,146 @@
+
++--------------------------------------+
+|         Example: CKKS Basics         |
++--------------------------------------+
+/
+| Encryption parameters :
+|   scheme: CKKS
+|   poly_modulus_degree: 8192
+|   coeff_modulus size: 200 (60 + 40 + 40 + 60) bits
+\
+
+Number of slots: 4096
+Input vector: 
+
+    [ 0.0000000, 0.0002442, 0.0004884, ..., 0.9995116, 0.9997558, 1.0000000 ]
+
+Evaluating polynomial PI*x^3 + 0.4x + 1 ...
+Line 129 --> Encode input vectors.
+Line 140 --> Compute x^2 and relinearize:
+    + Scale of x^2 before rescale: 80 bits
+Line 153 --> Rescale x^2.
+    + Scale of x^2 after rescale: 40 bits
+Line 167 --> Compute and rescale PI*x.
+    + Scale of PI*x before rescale: 80 bits
+    + Scale of PI*x after rescale: 40 bits
+Line 184 --> Compute, relinearize, and rescale (PI*x)*x^2.
+    + Scale of PI*x^3 before rescale: 80 bits
+    + Scale of PI*x^3 after rescale: 40 bits
+Line 198 --> Compute and rescale 0.4*x.
+    + Scale of 0.4*x before rescale: 80 bits
+    + Scale of 0.4*x after rescale: 40 bits
+
+Line 217 --> Parameters used by all three terms are different.
+    + Modulus chain index for x3_encrypted: 0
+    + Modulus chain index for x1_encrypted: 1
+    + Modulus chain index for plain_coeff0: 2
+
+Line 248 --> The exact scales of all three terms are different:
+    + Exact scale in PI*x^3: 1099512659965.7514648438
+    + Exact scale in  0.4*x: 1099511775231.0197753906
+    + Exact scale in      1: 1099511627776.0000000000
+
+Line 273 --> Normalize scales to 2^40.
+Line 284 --> Normalize encryption parameters to the lowest level.
+Line 293 --> Compute PI*x^3 + 0.4*x + 1.
+Line 303 --> Decrypt and decode PI*x^3 + 0.4x + 1.
+    + Expected result:
+
+    [ 1.0000000, 1.0000977, 1.0001954, ..., 4.5367965, 4.5391940, 4.5415926 ]
+
+    + Computed result ...... Correct.
+
+    [ 1.0000000, 1.0000977, 1.0001954, ..., 4.5367995, 4.5391970, 4.5415957 ]
+
+!!! START TEST MULT !!!
+------------------
+Start Multiplication
+Multiplication time = 416.415 ms
+------------------
+---------------------
+mmult: 0 :(0.338876,0.847453)
+dmult: 0 :(0.338876,0.847453)
+emult: 0 :(1.1127e-07,-5.42078e-08)
+---------------------
+---------------------
+mmult: 1 :(-0.284005,0.728583)
+dmult: 1 :(-0.284005,0.728583)
+emult: 1 :(-1.05826e-07,-2.00768e-08)
+---------------------
+---------------------
+mmult: 2 :(-0.242396,0.508315)
+dmult: 2 :(-0.242396,0.508315)
+emult: 2 :(5.4658e-08,5.65963e-08)
+---------------------
+---------------------
+mmult: 3 :(0.0820136,0.416564)
+dmult: 3 :(0.0820137,0.416564)
+emult: 3 :(-1.00521e-07,-4.56883e-08)
+---------------------
+---------------------
+mmult: 4 :(0.021877,0.20754)
+dmult: 4 :(0.021877,0.20754)
+emult: 4 :(3.77272e-08,1.11326e-07)
+---------------------
+---------------------
+mmult: 5 :(0.358142,0.167195)
+dmult: 5 :(0.358142,0.167195)
+emult: 5 :(5.6042e-08,4.83392e-08)
+---------------------
+---------------------
+mmult: 6 :(0.255752,0.148189)
+dmult: 6 :(0.255752,0.148189)
+emult: 6 :(7.4049e-08,-3.19294e-08)
+---------------------
+---------------------
+mmult: 7 :(-0.0184654,0.824996)
+dmult: 7 :(-0.0184653,0.824996)
+emult: 7 :(-1.11203e-07,-8.96157e-08)
+---------------------
+---------------------
+mmult: 8 :(0.277102,0.142676)
+dmult: 8 :(0.277102,0.142676)
+emult: 8 :(1.05029e-07,-3.04965e-08)
+---------------------
+---------------------
+mmult: 9 :(0.223509,1.03603)
+dmult: 9 :(0.223509,1.03603)
+emult: 9 :(-1.56868e-07,1.19568e-07)
+---------------------
+---------------------
+mmult: 10 :(0.0172438,0.505573)
+dmult: 10 :(0.0172437,0.505572)
+emult: 10 :(1.27794e-07,1.8672e-07)
+---------------------
+---------------------
+mmult: 11 :(-0.584432,0.709868)
+dmult: 11 :(-0.584432,0.709868)
+emult: 11 :(1.57572e-07,6.81706e-08)
+---------------------
+---------------------
+mmult: 12 :(0.625996,0.469983)
+dmult: 12 :(0.625996,0.469983)
+emult: 12 :(-1.29629e-07,2.17898e-07)
+---------------------
+---------------------
+mmult: 13 :(0.480833,0.704491)
+dmult: 13 :(0.480833,0.704491)
+emult: 13 :(-1.04707e-08,1.89694e-07)
+---------------------
+---------------------
+mmult: 14 :(-0.0133192,0.106702)
+dmult: 14 :(-0.0133192,0.106702)
+emult: 14 :(-6.53943e-08,2.2188e-08)
+---------------------
+---------------------
+mmult: 15 :(-0.858139,1.02665)
+dmult: 15 :(-0.858139,1.02664)
+emult: 15 :(1.18661e-08,1.45649e-07)
+---------------------
+!!! END TEST MULT !!!
+Begin HElib mult test
+c.capacity = 78.871737
+c.errorBound = 0.000000
+c.capacity = 20.158020
+c.errorBound = 0.000015
+distance=0.000014
