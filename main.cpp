@@ -1,9 +1,8 @@
-#include "ckks_example.h"
-#include "fhe_libs.h"
-#include "seal/seal.h"
 
 #include "calculators/heaan_calc.hpp"
+#include "calculators/helib_calc.hpp"
 #include "calculators/seal_calc.hpp"
+#include <helib/matmul.h>
 #include <numeric>
 
 void heaanMult(long logq, long logp, long logn) {
@@ -177,10 +176,50 @@ void heaanCalcTest() {
     printf("gmi=%f, ea1c=%f\n", gmi_v[0].real(), ea1c_v[0].real());
 }
 
+void helibCalcTest() {
+    using std::vector;
+    srand(time(NULL));
+    vector<double> v(15);
+
+    const auto rand = []() { return fRand(-10, 10); };
+    const auto printVec = [](const vector<double> &v) {
+        for (double d : v) {
+            printf("%f, ", d);
+        }
+        printf("\n");
+    };
+
+    for (double &d : v) {
+        d = rand();
+    }
+
+    HelibCalc calc;
+    printVec(v);
+    helib::Ctxt c = calc.encrypt(v);
+    auto v2 = calc.decrypt(c, v.size());
+    printVec(v2);
+    auto mean_c = calc.mean(c, v.size());
+    auto mean_v = calc.decrypt(mean_c, v.size());
+    double mean_d = [&v]() {
+        double sum = 0;
+        for (double d : v)
+            sum += d;
+        return sum / v.size();
+    }();
+    printf("calc mean: %f real mean: %f\n", mean_v[0], mean_d);
+
+    auto gmi_c = calc.gmi(mean_c);
+    auto gmi_v = calc.decrypt(gmi_c, 1);
+    auto ea1c_c = calc.ea1c(mean_c);
+    auto ea1c_v = calc.decrypt(ea1c_c, 1);
+    printf("gmi: %f, ea1c: %f\n", gmi_v[0], ea1c_v[0]);
+}
+
 int main() {
     // example_ckks_basics();
     // heaanMult(800, 30, 4);
     // helibMult();
-    heaanCalcTest();
+    // heaanCalcTest();
+    helibCalcTest();
     return 0;
 }

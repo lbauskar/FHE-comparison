@@ -2,3 +2,9 @@
 [ 01:23:10 ] WARNING: KS-noise-ratio-hoist=2.928496
 [ 03:01:22 ] WARNING: extra factor hack invoked in reLinearize with xf=210
 [ 03:01:22 ] WARNING: KS-noise-ratio-hoist=2.754900
+[ 13:03:32 ] WARNING: extra factor hack invoked in reLinearize with xf=303
+[ 13:03:32 ] WARNING: KS-noise-ratio=4.133209
+[ 13:06:05 ] WARNING: extra factor hack invoked in reLinearize with xf=303
+[ 13:06:05 ] WARNING: KS-noise-ratio=4.117708
+[ 13:10:56 ] WARNING: extra factor hack invoked in reLinearize with xf=303
+[ 13:10:57 ] WARNING: KS-noise-ratio=4.046037
