@@ -8,6 +8,7 @@
         "mutex": "cpp",
         "sstream": "cpp",
         "type_traits": "cpp",
-        "random": "cpp"
+        "random": "cpp",
+        "complex": "cpp"
     }
 }

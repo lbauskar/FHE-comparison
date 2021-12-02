@@ -2,6 +2,7 @@
 #include "fhe_libs.h"
 #include "seal/seal.h"
 
+#include "calculators/heaan_calc.hpp"
 #include "calculators/seal_calc.hpp"
 #include <numeric>
 
@@ -91,7 +92,7 @@ double fRand(const double fMin, const double fMax) {
 void sealCalcTest() {
     using std::vector;
     srand(time(NULL));
-    vector<double> v(20);
+    vector<double> v(2000);
 
     const auto rand = []() { return fRand(-10, 10); };
     const auto printVec = [](const vector<double> &v) {
@@ -104,12 +105,9 @@ void sealCalcTest() {
     for (double &d : v) {
         d = rand();
     }
-    printVec(v);
 
     SealCalc calc;
     seal::Ciphertext c = calc.encrypt(v);
-    vector<double> v2 = calc.decrypt(c, v.size());
-    printVec(v2);
 
     seal::Ciphertext mean_c = calc.mean(c, v.size());
     vector<double> mean = calc.decrypt(mean_c, v.size());
@@ -142,10 +140,47 @@ void sealCalcTest() {
     printf("gmi: %f, ea1c: %f\n", gmi_v[0], ea1c_v[0]);
 }
 
+void heaanCalcTest() {
+    vector<complex<double>> v(15);
+    const auto rand = []() { return complex<double>(fRand(-10, 10), 0); };
+    for (auto &c : v)
+        c = rand();
+
+    const auto printVec = [](vector<complex<double>> &v) {
+        for (auto &c : v) {
+            printf("%f, ", c.real());
+        }
+        printf("\n");
+    };
+
+    HeaanCalc calc;
+    size_t n = v.size();
+    printVec(v);
+    puts("-----");
+    Ciphertext c1 = calc.encrypt(v);
+    auto v1 = calc.decrypt(c1, n);
+    printVec(v1);
+    Ciphertext mc = calc.mean(c1, n);
+    auto mv = calc.decrypt(mc, n);
+    double mean_d = [&v, n]() {
+        double sum = 0;
+        for (auto &c : v)
+            sum += c.real();
+        sum /= n;
+        return sum;
+    }();
+    printf("calc mean=%f, real mean=%f\n", mv[0].real(), mean_d);
+    auto gmi_c = calc.gmi(mc);
+    auto gmi_v = calc.decrypt(gmi_c, 1);
+    auto ea1c_c = calc.ea1c(mc);
+    auto ea1c_v = calc.decrypt(ea1c_c, 1);
+    printf("gmi=%f, ea1c=%f\n", gmi_v[0].real(), ea1c_v[0].real());
+}
+
 int main() {
     // example_ckks_basics();
     // heaanMult(800, 30, 4);
     // helibMult();
-    sealCalcTest();
+    heaanCalcTest();
     return 0;
 }
