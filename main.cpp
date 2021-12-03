@@ -3,142 +3,8 @@
 #include "calculators/helib_calc.hpp"
 #include "calculators/seal_calc.hpp"
 #include <chrono>
-#include <helib/matmul.h>
-#include <numeric>
 #include <string>
 #include <vector>
-
-double fRand(const double fMin, const double fMax) {
-    double f = (double)rand() / RAND_MAX;
-    return fMin + f * (fMax - fMin);
-}
-
-void sealCalcTest() {
-    using std::vector;
-    srand(time(NULL));
-    vector<double> v(2000);
-
-    const auto rand = []() { return fRand(-10, 10); };
-    const auto printVec = [](const vector<double> &v) {
-        for (double d : v) {
-            printf("%f, ", d);
-        }
-        printf("\n");
-    };
-
-    for (double &d : v) {
-        d = rand();
-    }
-
-    SealCalc calc;
-    seal::Ciphertext c = calc.encrypt(v);
-
-    seal::Ciphertext mean_c = calc.mean(c, v.size());
-    vector<double> mean = calc.decrypt(mean_c, v.size());
-    printf("calc mean: %f, real mean: %f\n", mean[0], [&v]() {
-        double sum = 0;
-        for (double d : v)
-            sum += d;
-        return sum / v.size();
-    }());
-
-    double var_d = [&v, &mean]() {
-        double sum = 0;
-        for (int i = 0; i < v.size(); ++i) {
-            sum += (v[i] - mean[i]) * (v[i] - mean[i]);
-        }
-
-        sum /= v.size();
-        return sum;
-    }();
-    auto var_c = calc.variance(c, mean_c, v.size());
-    auto var_v = calc.decrypt(var_c, v.size());
-    printf("cal var: %f, real var: %f\n", var_v[0], var_d);
-
-    auto gmi_c = calc.gmi(mean_c);
-    auto ea1c_c = calc.ea1c(mean_c);
-
-    auto gmi_v = calc.decrypt(gmi_c, 1);
-    auto ea1c_v = calc.decrypt(ea1c_c, 1);
-
-    printf("gmi: %f, ea1c: %f\n", gmi_v[0], ea1c_v[0]);
-}
-
-void heaanCalcTest() {
-    vector<complex<double>> v(15);
-    const auto rand = []() { return complex<double>(fRand(-10, 10), 0); };
-    for (auto &c : v)
-        c = rand();
-
-    const auto printVec = [](vector<complex<double>> &v) {
-        for (auto &c : v) {
-            printf("%f, ", c.real());
-        }
-        printf("\n");
-    };
-
-    HeaanCalc calc;
-    size_t n = v.size();
-    printVec(v);
-    puts("-----");
-    Ciphertext c1 = calc.encrypt(v);
-    auto v1 = calc.decrypt(c1, n);
-    printVec(v1);
-    Ciphertext mc = calc.mean(c1, n);
-    auto mv = calc.decrypt(mc, n);
-    double mean_d = [&v, n]() {
-        double sum = 0;
-        for (auto &c : v)
-            sum += c.real();
-        sum /= n;
-        return sum;
-    }();
-    printf("calc mean=%f, real mean=%f\n", mv[0].real(), mean_d);
-    auto gmi_c = calc.gmi(mc);
-    auto gmi_v = calc.decrypt(gmi_c, 1);
-    auto ea1c_c = calc.ea1c(mc);
-    auto ea1c_v = calc.decrypt(ea1c_c, 1);
-    printf("gmi=%f, ea1c=%f\n", gmi_v[0].real(), ea1c_v[0].real());
-}
-
-void helibCalcTest() {
-    using std::vector;
-    srand(time(NULL));
-    vector<double> v(15);
-
-    const auto rand = []() { return fRand(-10, 10); };
-    const auto printVec = [](const vector<double> &v) {
-        for (double d : v) {
-            printf("%f, ", d);
-        }
-        printf("\n");
-    };
-
-    for (double &d : v) {
-        d = rand();
-    }
-
-    HelibCalc calc;
-    printVec(v);
-    helib::Ctxt c = calc.encrypt(v);
-    auto v2 = calc.decrypt(c, v.size());
-    printVec(v2);
-    auto mean_c = calc.mean(c, v.size());
-    auto mean_v = calc.decrypt(mean_c, v.size());
-    double mean_d = [&v]() {
-        double sum = 0;
-        for (double d : v)
-            sum += d;
-        return sum / v.size();
-    }();
-    printf("calc mean: %f real mean: %f\n", mean_v[0], mean_d);
-
-    auto gmi_c = calc.gmi(mean_c);
-    auto gmi_v = calc.decrypt(gmi_c, 1);
-    auto ea1c_c = calc.ea1c(mean_c);
-    auto ea1c_v = calc.decrypt(ea1c_c, 1);
-    printf("gmi: %f, ea1c: %f\n", gmi_v[0], ea1c_v[0]);
-}
 
 struct GlucoseData {
     std::vector<double> bg, cgm, cho, insulin, lbgi, hbgi, risk;
@@ -192,7 +58,8 @@ struct GlucoseStats {
     Stats bg, cgm, cho, insulin, lbgi, hbgi, risk;
 };
 
-void unencryptedSuite(const GlucoseData &data, const bool csv = true) {
+void unencryptedSuite(const GlucoseData &data, const int id,
+                      const bool csv = true) {
     using std::vector, std::string;
     typedef std::chrono::high_resolution_clock hrc;
 
@@ -203,8 +70,8 @@ void unencryptedSuite(const GlucoseData &data, const bool csv = true) {
             .count();
     };
 
-    const auto testVector = [&usec, csv](const vector<double> &v,
-                                         const string &label) {
+    const auto testVector = [&usec, csv, id](const vector<double> &v,
+                                             const string &label) {
         auto start = hrc::now();
         // no encryption necessary
         auto enc_time = hrc::now();
@@ -227,31 +94,32 @@ void unencryptedSuite(const GlucoseData &data, const bool csv = true) {
         auto dec_time = hrc::now();
 
         if (csv) {
-            printf("Unencrypted %s, %lld, %f, %lld, %f, %lld, %f, %lld, %lld\n",
+            printf(
+                "Unencrypted %s %d, %lld, %f, %lld, %f, %lld, %f, %lld, %lld\n",
+                label.c_str(), id, usec(start, enc_time), mean_d,
+                usec(enc_time, mean_time), gmi_d, usec(mean_time, gmi_time),
+                ea1c_d, usec(gmi_time, ea1c_time), usec(ea1c_time, dec_time));
+        } else {
+            printf("    %s: enc (%lld us), mean=%f (%lld us), gmi=%f (%lld "
+                   "us), "
+                   "ea1c=%f (%lld us), dec (%lld us)\n",
                    label.c_str(), usec(start, enc_time), mean_d,
                    usec(enc_time, mean_time), gmi_d, usec(mean_time, gmi_time),
                    ea1c_d, usec(gmi_time, ea1c_time),
                    usec(ea1c_time, dec_time));
-        } else {
-            printf(
-                "    %s: enc (%lld us), mean=%f (%lld us), gmi=%f (%lld us), "
-                "ea1c=%f (%lld us), dec (%lld us)\n",
-                label.c_str(), usec(start, enc_time), mean_d,
-                usec(enc_time, mean_time), gmi_d, usec(mean_time, gmi_time),
-                ea1c_d, usec(gmi_time, ea1c_time), usec(ea1c_time, dec_time));
         }
     };
 
     auto start = hrc::now();
     if (!csv)
         printf("Stats for no encryption:\n");
-    testVector(data.bg, "bg");
+    // testVector(data.bg, "bg");
     testVector(data.cgm, "cgm");
-    testVector(data.cho, "cho");
-    testVector(data.hbgi, "hbgi");
-    testVector(data.insulin, "insulin");
-    testVector(data.lbgi, "lbgi");
-    testVector(data.risk, "risk");
+    // testVector(data.cho, "cho");
+    // testVector(data.hbgi, "hbgi");
+    // testVector(data.insulin, "insulin");
+    // testVector(data.lbgi, "lbgi");
+    // testVector(data.risk, "risk");
     auto end = hrc::now();
     if (!csv) {
         printf("    total time: %lld us or %f s\n", usec(start, end),
@@ -259,7 +127,7 @@ void unencryptedSuite(const GlucoseData &data, const bool csv = true) {
     }
 };
 
-void sealSuite(const GlucoseData &data, const bool csv = true) {
+void sealSuite(const GlucoseData &data, const int id, const bool csv = true) {
     using std::vector, std::string;
     typedef std::chrono::high_resolution_clock hrc;
 
@@ -270,8 +138,8 @@ void sealSuite(const GlucoseData &data, const bool csv = true) {
             .count();
     };
 
-    const auto testVector = [&usec, csv](const vector<double> &v,
-                                         const string &label) {
+    const auto testVector = [&usec, csv, id](const vector<double> &v,
+                                             const string &label) {
         auto start = hrc::now();
 
         SealCalc calc;
@@ -294,8 +162,8 @@ void sealSuite(const GlucoseData &data, const bool csv = true) {
         auto dec_time = hrc::now();
 
         if (csv) {
-            printf("SEAL %s, %lld, %f, %lld, %f, %lld, %f, %lld, %lld\n",
-                   label.c_str(), usec(start, enc_time), mean_d,
+            printf("SEAL %s %d, %lld, %f, %lld, %f, %lld, %f, %lld, %lld\n",
+                   label.c_str(), id, usec(start, enc_time), mean_d,
                    usec(enc_time, mean_time), gmi_d, usec(mean_time, gmi_time),
                    ea1c_d, usec(gmi_time, ea1c_time),
                    usec(ea1c_time, dec_time));
@@ -313,13 +181,13 @@ void sealSuite(const GlucoseData &data, const bool csv = true) {
     auto start = hrc::now();
     if (!csv)
         printf("Stats for Microsoft SEAL:\n");
-    testVector(data.bg, "bg");
+    // testVector(data.bg, "bg");
     testVector(data.cgm, "cgm");
-    testVector(data.cho, "cho");
-    testVector(data.hbgi, "hbgi");
-    testVector(data.insulin, "insulin");
-    testVector(data.lbgi, "lbgi");
-    testVector(data.risk, "risk");
+    // testVector(data.cho, "cho");
+    // testVector(data.hbgi, "hbgi");
+    // testVector(data.insulin, "insulin");
+    // testVector(data.lbgi, "lbgi");
+    // testVector(data.risk, "risk");
     auto end = hrc::now();
     if (!csv) {
         printf("    total time: %lld us or %f s\n", usec(start, end),
@@ -327,7 +195,7 @@ void sealSuite(const GlucoseData &data, const bool csv = true) {
     }
 }
 
-void heaanSuite(const GlucoseData &data, const bool csv = true) {
+void heaanSuite(const GlucoseData &data, const int id, const bool csv = true) {
     using std::vector, std::string, std::complex;
     typedef std::chrono::high_resolution_clock hrc;
 
@@ -346,8 +214,8 @@ void heaanSuite(const GlucoseData &data, const bool csv = true) {
         return res;
     };
 
-    const auto testVector = [&usec, csv](vector<complex<double>> v,
-                                         const string &label) {
+    const auto testVector = [&usec, csv, id](vector<complex<double>> v,
+                                             const string &label) {
         auto start = hrc::now();
 
         HeaanCalc calc;
@@ -371,8 +239,8 @@ void heaanSuite(const GlucoseData &data, const bool csv = true) {
         auto dec_time = hrc::now();
 
         if (csv) {
-            printf("HEAAN %s, %lld, %f, %lld, %f, %lld, %f, %lld, %lld\n",
-                   label.c_str(), usec(start, enc_time), mean_d,
+            printf("HEAAN %s %d, %lld, %f, %lld, %f, %lld, %f, %lld, %lld\n",
+                   label.c_str(), id, usec(start, enc_time), mean_d,
                    usec(enc_time, mean_time), gmi_d, usec(mean_time, gmi_time),
                    ea1c_d, usec(gmi_time, ea1c_time),
                    usec(ea1c_time, dec_time));
@@ -389,13 +257,13 @@ void heaanSuite(const GlucoseData &data, const bool csv = true) {
     auto start = hrc::now();
     if (!csv)
         printf("Stats for HEAAN:\n");
-    testVector(toComplexVector(data.bg), "bg");
+    // testVector(toComplexVector(data.bg), "bg");
     testVector(toComplexVector(data.cgm), "cgm");
-    testVector(toComplexVector(data.cho), "cho");
-    testVector(toComplexVector(data.hbgi), "hbgi");
-    testVector(toComplexVector(data.insulin), "insulin");
-    testVector(toComplexVector(data.lbgi), "lbgi");
-    testVector(toComplexVector(data.risk), "risk");
+    // testVector(toComplexVector(data.cho), "cho");
+    // testVector(toComplexVector(data.hbgi), "hbgi");
+    // testVector(toComplexVector(data.insulin), "insulin");
+    // testVector(toComplexVector(data.lbgi), "lbgi");
+    // testVector(toComplexVector(data.risk), "risk");
     auto end = hrc::now();
     if (!csv) {
         printf("    total time: %lld us or %f s\n", usec(start, end),
@@ -403,7 +271,7 @@ void heaanSuite(const GlucoseData &data, const bool csv = true) {
     }
 };
 
-void helibSuite(const GlucoseData &data, const bool csv = true) {
+void helibSuite(const GlucoseData &data, const int id, const bool csv = true) {
     using std::vector, std::string;
     typedef std::chrono::high_resolution_clock hrc;
 
@@ -414,8 +282,8 @@ void helibSuite(const GlucoseData &data, const bool csv = true) {
             .count();
     };
 
-    const auto testVector = [&usec, csv](const vector<double> &v,
-                                         const string &label) {
+    const auto testVector = [&usec, csv, id](const vector<double> &v,
+                                             const string &label) {
         using namespace helib;
         auto start = hrc::now();
 
@@ -439,8 +307,8 @@ void helibSuite(const GlucoseData &data, const bool csv = true) {
         auto dec_time = hrc::now();
 
         if (csv) {
-            printf("HElib %s, %lld, %f, %lld, %f, %lld, %f, %lld, %lld\n",
-                   label.c_str(), usec(start, enc_time), mean_d,
+            printf("HElib %s %d, %lld, %f, %lld, %f, %lld, %f, %lld, %lld\n",
+                   label.c_str(), id, usec(start, enc_time), mean_d,
                    usec(enc_time, mean_time), gmi_d, usec(mean_time, gmi_time),
                    ea1c_d, usec(gmi_time, ea1c_time),
                    usec(ea1c_time, dec_time));
@@ -457,13 +325,13 @@ void helibSuite(const GlucoseData &data, const bool csv = true) {
     auto start = hrc::now();
     if (!csv)
         printf("Stats for HElib:\n");
-    testVector(data.bg, "bg");
+    // testVector(data.bg, "bg");
     testVector(data.cgm, "cgm");
-    testVector(data.cho, "cho");
-    testVector(data.hbgi, "hbgi");
-    testVector(data.insulin, "insulin");
-    testVector(data.lbgi, "lbgi");
-    testVector(data.risk, "risk");
+    // testVector(data.cho, "cho");
+    // testVector(data.hbgi, "hbgi");
+    // testVector(data.insulin, "insulin");
+    // testVector(data.lbgi, "lbgi");
+    // testVector(data.risk, "risk");
     auto end = hrc::now();
     if (!csv) {
         printf("    total time: %lld us or %f s\n", usec(start, end),
@@ -472,26 +340,21 @@ void helibSuite(const GlucoseData &data, const bool csv = true) {
 }
 
 int main(int argc, char **argv) {
-
-    std::string filename;
-
-    if (argc < 2) {
-        printf("csv filename: ");
-        cin >> filename;
-    } else {
-        filename = argv[1];
-    }
-
-    GlucoseData data = readCsv(filename);
-
     const bool csv = true;
     if (csv) {
         printf("Label, encryption time, mean, mean time, gmi, gmi time, ea1c, "
                "ea1c time, decryption time\n");
     }
 
-    unencryptedSuite(data, csv);
-    sealSuite(data, csv);
-    heaanSuite(data, csv);
-    helibSuite(data, csv);
+    for (int i = 61; i <= 100; ++i) {
+        string filename = "all1day/adult" + to_string(i) + ".csv";
+        GlucoseData data = readCsv(filename);
+
+        unencryptedSuite(data, i, csv);
+        sealSuite(data, i, csv);
+        heaanSuite(data, i, csv);
+        helibSuite(data, i, csv);
+        fflush(stdout);
+        fprintf(stderr, "%s %d\n", filename.c_str(), i);
+    }
 }
