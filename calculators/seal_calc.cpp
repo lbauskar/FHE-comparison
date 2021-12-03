@@ -16,12 +16,6 @@ SealCalc::SealCalc() {
     this->encoder = std::make_unique<CKKSEncoder>(context);
     this->evaluator = std::make_unique<Evaluator>(context);
 
-    printf("Microsoft SEAL Params: Scheme=CKKS, modulus degree=%llu, "
-           "coefficient mod size=%d bits, scale=40 bits, slots=%llu\n",
-           params.poly_modulus_degree(),
-           context.key_context_data()->total_coeff_modulus_bit_count(),
-           encoder->slot_count());
-
     KeyGenerator keygen(context);
     this->secret_key = keygen.secret_key();
     keygen.create_public_key(public_key);
@@ -43,13 +37,6 @@ Ciphertext SealCalc::encrypt(const vector<double> &input) const {
     encryptor.encrypt(ptext, ctext);
     return ctext;
 }
-
-void printVec(const vector<double> &v) {
-    for (double d : v) {
-        printf("%f, ", d);
-    }
-    printf("\n");
-};
 
 Ciphertext SealCalc::mean(Ciphertext cipher_text,
                           const size_t num_elements) const {
@@ -120,8 +107,6 @@ Ciphertext SealCalc::gmi(Ciphertext mean) const {
     evaluator->relinearize_inplace(mean, relin_keys);
     evaluator->rescale_to_next_inplace(mean);
     mean.scale() = this->scale;
-
-    printVec(decrypt(mean, 20));
 
     encoder->encode(3.31, this->scale, p);
     evaluator->mod_switch_to_inplace(p, mean.parms_id());
