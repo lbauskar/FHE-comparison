@@ -1,11 +1,7 @@
-## Building Microsoft SEAL
+## FHE Comparison (Cryptography Project)
 
-Type the following into the terminal to build the Microsoft SEAL library.
+This code is just a small benchmark suite for Microsoft SEAL, HEANN, and HElib that compares the speed of their CKKS implementations.
+To build everything just run `sh cleanbuild.sh` in your terminal. This will install the libraries, compile them, then compile the benchmarking code.
+You can then run the actual benchmarking code with `build/fhe-test`.
 
-```Bash
-cd SEAL
-cmake -S . -B build
-cmake --build build
-```
-
-Link this library with the `gcc` argument `-llibseal-3.7 -LSEAL/build/lib`.
+I only ran this on Linux. It probably does not work on MacOS and definitely won't run on Windows.
